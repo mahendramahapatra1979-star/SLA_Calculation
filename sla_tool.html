@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLA Order Execution Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --bldg3-main: #0ea5e9;
+            --bldg3-bg: #f0f9ff;
+            --bldg5-main: #8b5cf6;
+            --bldg5-bg: #f5f3ff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border-light: #cbd5e1;
+            --success: #10b981;
+            --danger: #ef4444;
+            --primary: #3b82f6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0; padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+        }
+
+        h1 { text-align: center; font-size: 26px; font-weight: 800; color: var(--text-dark); margin-bottom: 20px; letter-spacing: -0.5px; }
+
+        /* Sleek Containers */
+        .glass-panel {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            padding: 20px; margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .panel-header { font-size: 18px; font-weight: 800; margin-bottom: 15px; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center;}
+
+        /* Top Controls */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; }
+        .filter-wrap label { font-weight: 600; color: var(--text-muted); margin-right: 10px; }
+        .filter-wrap select { padding: 8px 16px; font-size: 14px; border-radius: 8px; border: 1px solid var(--border-light); font-weight: 600; outline: none; cursor: pointer; }
+        
+        .btn { padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-admin { background: var(--text-dark); color: #fff; }
+        .btn-admin:hover { background: #334155; }
+        .btn-csv { background: var(--primary); color: #fff; display: flex; align-items: center; gap: 8px;}
+        .btn-csv:hover { background: #2563eb; }
+        
+        /* Sticky Freeze Pane Controls */
+        .sticky-controls {
+            position: sticky;
+            top: -20px;
+            z-index: 50;
+            background: var(--card-bg);
+            padding: 15px 0;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .btn-submit { background: var(--success); color: #fff; font-size: 16px; padding: 12px; flex-grow: 1; }
+        .btn-submit:hover { background: #059669; }
+        .btn-scroll { background: #475569; color: #fff; font-size: 14px; padding: 12px 20px; white-space: nowrap; }
+        .btn-scroll:hover { background: #334155; }
+
+        /* Data Entry Grid Layout */
+        .data-wrapper { overflow-x: auto; padding-bottom: 10px; }
+        .grid-header {
+            display: flex; margin-bottom: 10px; font-weight: 800; font-size: 15px;
+            text-transform: uppercase; letter-spacing: 0.5px; min-width: 1750px;
+        }
+        .hdr-mp { width: 130px; padding-left: 15px; color: var(--text-muted); flex-shrink: 0; }
+        .hdr-bldg3 { flex: 1; text-align: center; color: var(--bldg3-main); border-right: 3px solid var(--border-light); }
+        .hdr-bldg5 { flex: 1; text-align: center; color: var(--bldg5-main); }
+
+        .form-row {
+            display: flex; align-items: stretch; margin-bottom: 12px;
+            background: #fff; border-radius: 10px; border: 1px solid #e2e8f0;
+            min-width: 1750px; overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .form-row:hover { border-color: var(--border-light); box-shadow: 0 4px 6px rgba(0,0,0,0.04); }
+        .mp-title {
+            width: 130px; flex-shrink: 0; display: flex; align-items: center; padding-left: 15px;
+            font-weight: 800; font-size: 14px; background: #f8fafc; border-right: 1px solid #e2e8f0;
+        }
+        .bldg-section { 
+            display: flex; flex: 1; align-items: center; justify-content: space-evenly; 
+            padding: 10px 5px; transition: 0.3s ease; 
+        }
+        .bldg-section.bldg3 { background: var(--bldg3-bg); border-right: 3px solid var(--border-light); }
+        .bldg-section.bldg5 { background: var(--bldg5-bg); }
+
+        .input-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .input-group label { font-size: 10px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+        
+        input[type="text"] {
+            width: 45px; padding: 6px 2px; font-size: 12px; font-weight: 700; text-align: center;
+            border: 1px solid var(--border-light); border-radius: 6px; outline: none; transition: 0.2s;
+        }
+        input[type="text"]:focus:not([readonly]) { border-color: var(--bldg3-main); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15); }
+        input.total-val { background: #e2e8f0; color: var(--text-dark); font-weight: 800; width: 55px;}
+        input.live-time { background: #dcfce7; color: #166534; border-color: #bbf7d0; width: 65px;}
+        
+        .time-left-box {
+            display: flex; gap: 3px; padding: 3px; border-radius: 6px; background: #fff;
+            border: 1px solid #e2e8f0; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+        }
+        input.time-left { width: 40px; font-size: 10px; background: #fef2f2; color: var(--danger); border-color: #fecaca; }
+        input.time-left.safe { background: #f0fdf4; color: var(--success); border-color: #bbf7d0; }
+
+        /* Report Tables */
+        .report-panel { display: none; margin-top: 25px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 10px; text-align: center; border: 1px solid var(--border-light); font-size: 12px; }
+        th { background: var(--text-dark); color: #fff; font-size: 11px; text-transform: uppercase; }
+        tr:nth-child(even) { background: #f8fafc; }
+        .rep-bldg3 { color: var(--bldg3-main); font-weight: 800; }
+        .rep-bldg5 { color: var(--bldg5-main); font-weight: 800; }
+        .rep-mp { font-weight: 700; color: var(--text-dark); }
+        .badge-breach { background: var(--danger); color: #fff; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+
+        /* Admin Modal & Mapping Table */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); }
+        .modal-content { background: #fff; margin: 2vh auto; width: 95%; max-width: 1000px; border-radius: 12px; display: flex; flex-direction: column; max-height: 96vh; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 20px; overflow-y: auto; }
+        .close-btn { font-size: 28px; font-weight: 700; color: var(--text-muted); cursor: pointer; margin-left: 20px; line-height: 1; }
+        
+        .admin-mapping-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+        .admin-mapping-table th, .admin-mapping-table td { border: 1px solid var(--border-light); padding: 8px; text-align: center; font-size: 13px; font-weight: 600;}
+        .admin-mapping-table th { background: var(--text-dark); color: #fff; }
+        .admin-mapping-table select { width: 100%; padding: 6px; font-size: 12px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; }
+        
+        .admin-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #e2e8f0; }
+        .admin-row:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+    <h1>Forward Order Execution SLA</h1>
+
+    <div class="glass-panel top-bar">
+        <div class="filter-wrap">
+            <label for="bldgFilter">Report Filter:</label>
+            <select id="bldgFilter" onchange="applyFilter()">
+                <option value="all">All Buildings</option>
+                <option value="bldg3">Bldg#3 Only</option>
+                <option value="bldg5">Bldg#5 Only</option>
+            </select>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="processCSV(this)">
+            <button class="btn btn-csv" onclick="document.getElementById('csvFileInput').click()">
+                📂 Upload CSV & Auto-Fill
+            </button>
+            <button class="btn btn-admin" onclick="document.getElementById('adminModal').style.display='block'">⚙️ Open Admin Zone (Mappings)</button>
+        </div>
+    </div>
+
+    <!-- Data Entry Zone -->
+    <div class="glass-panel" style="position: relative;">
+        <div class="sticky-controls">
+            <button class="btn btn-scroll" onclick="window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'})">⬇ Go to Bottom</button>
+            <button class="btn btn-submit" onclick="activateReport()">Generate Final SLA Report</button>
+        </div>
+
+        <div class="panel-header">Live Data Entry Section</div>
+        <div class="data-wrapper" id="dataGrid"></div>
+    </div>
+
+    <!-- Final Report (PACKING) -->
+    <div class="glass-panel report-panel" id="finalReportView">
+        <div class="panel-header">
+            Live Final SLA Calculation Report (Packing)
+            <select class="mp-filter-select" onchange="changeMpFilter(this.value)" style="padding:5px; border-radius:5px;">
+                <option value="all">🔍 All Marketplaces</option>
+            </select>
+        </div>
+        <div style="overflow-x: auto;">
+            <table id="reportTable">
+                <thead>
+                    <tr>
+                        <th style="cursor:pointer;" onclick="toggleSort('bldg')">BLDG# ⇅</th>
+                        <th style="cursor:pointer;" onclick="toggleSort('mp')">MARKETPLACE ⇅</th>
+                        <th>Time Req 1st (Mins)</th><th>Manpower 1st</th>
+                        <th>Time Req 2nd (Mins)</th><th>Manpower 2nd</th>
+                        <th>Time Req 3rd (Mins)</th><th>Manpower 3rd</th>
+                        <th>Time Req 4th (Mins)</th><th>Manpower 4th</th>
+                        <th>Time Req 5th (Mins)</th><th>Manpower 5th</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Final Report (HANDOVER) -->
+    <div class="glass-panel report-panel" id="handoverReportView">
+        <div class="panel-header">Live Final SLA Calculation Report (Handover)</div>
+        <div style="overflow-x: auto;">
+            <table id="handoverTable">
+                <thead>
+                    <tr>
+                        <th style="cursor:pointer;" onclick="toggleSort('bldg')">BLDG# ⇅</th>
+                        <th style="cursor:pointer;" onclick="toggleSort('mp')">MARKETPLACE ⇅</th>
+                        <th>Handover 1st SLA (Qty)</th>
+                        <th>Handover 2nd SLA (Qty)</th>
+                        <th>Handover 3rd SLA (Qty)</th>
+                        <th>Handover 4th SLA (Qty)</th>
+                        <th>Handover 5th SLA (Qty)</th>
+                    </tr>
+                </thead>
+                <tbody id="handoverTbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BOTTOM SCROLL BUTTON -->
+    <div style="display: flex; gap: 15px; padding-bottom: 30px;">
+        <button class="btn btn-submit" onclick="activateReport()">Generate Final SLA Report</button>
+        <button class="btn btn-scroll" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">⬆ Go to Top</button>
+    </div>
+
+    <!-- Admin Modal -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin:0; font-size: 20px; font-weight:800;">Admin Zone (SLA Mapping & Data)</h2>
+                <div style="display:flex; align-items:center;">
+                    <button class="btn btn-submit" style="margin:0; padding:8px 20px; flex-grow:0;" onclick="saveAdminData()">💾 Save Details</button>
+                    <span class="close-btn" onclick="document.getElementById('adminModal').style.display='none'">&times;</span>
+                </div>
+            </div>
+            <div class="modal-body">
+                
+                <h3 style="margin-top:0; color:var(--text-muted); font-size:14px; text-transform:uppercase;">1. Dynamic SLA Slot Mapping</h3>
+                <p style="font-size:12px; color:#888; margin-top:-10px;">Select which time slot corresponds to which SLA for each Marketplace. CSV auto-fill will follow these rules.</p>
+                <table class="admin-mapping-table">
+                    <thead>
+                        <tr><th>Marketplace</th><th>1st SLA</th><th>2nd SLA</th><th>3rd SLA</th><th>4th SLA</th><th>5th SLA</th></tr>
+                    </thead>
+                    <tbody id="mappingTbody"></tbody>
+                </table>
+
+                <h3 style="margin-top:20px; color:var(--text-muted); font-size:14px; text-transform:uppercase;">2. Marketplace SLA Times (HH:MM)</h3>
+                <div id="adminGrid"></div>
+                
+                <h3 style="margin-top:30px; color:var(--text-muted); font-size:14px; text-transform:uppercase;">3. Operations Particulars</h3>
+                <div class="admin-row">
+                    <div style="width: 150px; font-weight:700; font-size:14px;">Packing Productivity</div>
+                    <div style="display:flex; gap:10px; align-items:center;"><span class="rep-bldg3">Bldg#3</span><input type="text" id="prod_bldg3" placeholder="Qty"></div>
+                    <div style="display:flex; gap:10px; align-items:center; margin-left:30px;"><span class="rep-bldg5">Bldg#5</span><input type="text" id="prod_bldg5" placeholder="Qty"></div>
+                </div>
+                <div class="admin-row">
+                    <div style="width: 150px; font-weight:700; font-size:14px;">Total Working Hour</div>
+                    <div style="display:flex; gap:10px; align-items:center;"><span class="rep-bldg3">Bldg#3</span><input type="text" class="time-format" id="hrs_bldg3" placeholder="HH:MM"></div>
+                    <div style="display:flex; gap:10px; align-items:center; margin-left:30px;"><span class="rep-bldg5">Bldg#5</span><input type="text" class="time-format" id="hrs_bldg5" placeholder="HH:MM"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const marketplaces = ['Ajio', 'Nykaa', 'Tatacliq', 'Myntra', 'Flipkart', 'Cocoblu'];
+        const bldgs = ['bldg3', 'bldg5'];
+        const slas = [1, 2, 3, 4, 5];
+        
+        // Dropdown Mapping Options
+        const timeSlots = [
+            { val: '', label: 'None' },
+            { val: '8amto10am', label: '8am to 10 am' },
+            { val: '10amto12pm', label: '10am to 12 pm' },
+            { val: '12pmto2pm', label: '12pm to 2pm' },
+            { val: '2pmto4pm', label: '2pm to 4pm' },
+            { val: '4pmto6pm', label: '4pm to 6pm' },
+            { val: '6pmto12am', label: '6pm to 12am' }
+        ];
+        
+        let isReportActive = false; 
+        window.sortCol = null; 
+        window.sortDir = 'asc'; 
+        window.filterMp = 'all';
+        window.handoverData = { bldg3: {}, bldg5: {} };
+
+        function initApp() {
+            let mappingHTML = '';
+            let adminHTML = '';
+            let dataHTML = `
+                <div class="grid-header">
+                    <div class="hdr-mp">Marketplace</div>
+                    <div class="hdr-bldg3" id="hdr-bldg3">BLDG #3</div>
+                    <div class="hdr-bldg5" id="hdr-bldg5">BLDG #5</div>
+                </div>
+            `;
+            
+            // Populate Filters
+            let mpSelects = document.querySelectorAll('.mp-filter-select');
+            mpSelects.forEach(sel => {
+                marketplaces.forEach(mp => {
+                    sel.innerHTML += `<option value="${mp}">${mp}</option>`;
+                });
+            });
+
+            marketplaces.forEach(mp => {
+                let key = mp.replace(/\s/g, '').toLowerCase();
+                
+                window.handoverData.bldg3[key] = { sla1:0, sla2:0, sla3:0, sla4:0, sla5:0 };
+                window.handoverData.bldg5[key] = { sla1:0, sla2:0, sla3:0, sla4:0, sla5:0 };
+                
+                // 1. Mapping Table Gen
+                mappingHTML += `<tr><td style="font-weight:800;">${mp}</td>`;
+                slas.forEach(idx => {
+                    let opts = timeSlots.map(t => `<option value="${t.val}">${t.label}</option>`).join('');
+                    mappingHTML += `<td><select id="map_${key}_${idx}">${opts}</select></td>`;
+                });
+                mappingHTML += `</tr>`;
+
+                // 2. Admin SLA Times Gen
+                adminHTML += `<div class="admin-row"><div style="width:90px; font-weight:800; font-size:13px;">${mp}</div>`;
+                bldgs.forEach(b => {
+                    adminHTML += `<div style="display:flex; gap:4px; align-items:center; margin-right:15px;">
+                        <span class="${b==='bldg3'?'rep-bldg3':'rep-bldg5'}" style="font-size:12px;">${b.toUpperCase()}</span>`;
+                    slas.forEach(idx => {
+                        adminHTML += `<input type="text" id="adm_${b}_${key}_${idx}" class="time-format" placeholder="${idx}th" style="width:40px; font-size:11px;">`;
+                    });
+                    adminHTML += `</div>`;
+                });
+                adminHTML += `</div>`;
+
+                // 3. Data Entry Gen
+                dataHTML += `<div class="form-row"><div class="mp-title">${mp}</div>`;
+                bldgs.forEach(b => {
+                    dataHTML += `<div class="bldg-section ${b} calc-group" id="wrap_${b}_${key}">`;
+                    
+                    slas.forEach(idx => {
+                        dataHTML += `<div class="input-group"><label>${idx}SLA Bal</label><input type="text" class="val-input" id="bal_${b}_${key}_${idx}"></div>`;
+                    });
+                    
+                    dataHTML += `<div class="input-group"><label>Total Bal</label><input type="text" class="total-val" id="tot_${b}_${key}" value="0" readonly></div>
+                        <div class="input-group"><label>Live Time</label><input type="text" class="live-time" readonly></div>
+                        <div class="input-group">
+                            <label style="color:var(--text-dark);">Time Left to SLA</label>
+                            <div class="time-left-box">`;
+                    slas.forEach(idx => {
+                        dataHTML += `<input type="text" class="time-left" id="tl_${b}_${key}_${idx}" readonly title="SLA ${idx}">`;
+                    });
+                    dataHTML += `</div></div></div>`;
+                });
+                dataHTML += `</div>`;
+            });
+
+            document.getElementById('mappingTbody').innerHTML = mappingHTML;
+            document.getElementById('adminGrid').innerHTML = adminHTML;
+            document.getElementById('dataGrid').innerHTML = dataHTML;
+            
+            loadAdminData();
+            setupEvents();
+        }
+
+        // --- NEW DYNAMIC CSV PROCESSING ---
+        function processCSV(input) {
+            let file = input.files[0];
+            if (!file) return;
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let text = e.target.result;
+                let rows = text.split('\n');
+                if (rows.length < 2) return;
+
+                let headers = rows[0].split(',').map(x => x.trim().toLowerCase().replace(/["'\s]/g, ''));
+                
+                let idx_loc = headers.findIndex(x => x.includes('location')); 
+                let idx_chan = headers.findIndex(x => x.includes('channel')); 
+                let idx_stat = headers.findIndex(x => x.includes('status')); 
+                
+                if(idx_loc === -1) idx_loc = 1;
+                if(idx_chan === -1) idx_chan = 2;
+                if(idx_stat === -1) idx_stat = 3;
+
+                let aggregated = { bldg3: {}, bldg5: {} };
+                window.handoverData = { bldg3: {}, bldg5: {} };
+
+                // Get Mapping Rules from Dropdowns dynamically
+                let mappingRules = {};
+                marketplaces.forEach(mp => {
+                    let key = mp.replace(/\s/g, '').toLowerCase();
+                    aggregated.bldg3[key] = { sla1:0, sla2:0, sla3:0, sla4:0, sla5:0 };
+                    aggregated.bldg5[key] = { sla1:0, sla2:0, sla3:0, sla4:0, sla5:0 };
+                    window.handoverData.bldg3[key] = { sla1:0, sla2:0, sla3:0, sla4:0, sla5:0 };
+                    window.handoverData.bldg5[key] = { sla1:0, sla2:0, sla3:0, sla4:0, sla5:0 };
+                    
+                    mappingRules[key] = {};
+                    slas.forEach(idx => {
+                        let mapVal = document.getElementById(`map_${key}_${idx}`).value;
+                        if(mapVal) {
+                            // Find corresponding CSV column index for this time slot
+                            let csvIdx = headers.findIndex(h => h.includes(mapVal));
+                            if(csvIdx !== -1) mappingRules[key][`sla${idx}`] = csvIdx;
+                        }
+                    });
+                });
+
+                for (let i = 1; i < rows.length; i++) { 
+                    if (!rows[i].trim()) continue;
+                    let cols = rows[i].split(',');
+                    
+                    let loc = cols[idx_loc] ? cols[idx_loc].toLowerCase().trim() : '';
+                    let channel = cols[idx_chan] ? cols[idx_chan].toUpperCase().trim() : '';
+                    let status = cols[idx_stat] ? cols[idx_stat].toUpperCase().trim() : '';
+                    
+                    let bldg = loc.includes('bldg5') ? 'bldg5' : (loc.includes('bldg3') ? 'bldg3' : null);
+                    if (!bldg) continue;
+                    
+                    let mpKey = '';
+                    if (channel.includes('FLIPKART')) mpKey = 'flipkart';
+                    else if (channel.includes('MYNTRA')) mpKey = 'myntra';
+                    else if (channel.includes('NYKAA')) mpKey = 'nykaa';
+                    else if (channel.includes('TATA')) mpKey = 'tatacliq';
+                    else if (channel.includes('AJIO')) mpKey = 'ajio';
+                    else if (channel.includes('COCOBLU')) mpKey = 'cocoblu';
+                    
+                    if (mpKey) {
+                        let targetAgg = null;
+                        if (status.includes('PICKING')) targetAgg = aggregated;
+                        else if (status.includes('PACKED')) targetAgg = window.handoverData;
+                        
+                        if (targetAgg) {
+                            // Add value to correct SLA based on the Mapping Rules
+                            slas.forEach(idx => {
+                                let csvColIdx = mappingRules[mpKey][`sla${idx}`];
+                                if (csvColIdx !== undefined) {
+                                    targetAgg[bldg][mpKey][`sla${idx}`] += (parseInt(cols[csvColIdx]?.replace(/["']/g, '')) || 0);
+                                }
+                            });
+                        }
+                    }
+                }
+
+                marketplaces.forEach(mp => {
+                    let key = mp.replace(/\s/g, '').toLowerCase();
+                    ['bldg3', 'bldg5'].forEach(b => {
+                        slas.forEach(idx => {
+                            let val = aggregated[b][key][`sla${idx}`];
+                            let inputElem = document.getElementById(`bal_${b}_${key}_${idx}`);
+                            if (inputElem) {
+                                // If map doesn't exist for this SLA, leave empty or put 0
+                                let hasMap = mappingRules[key][`sla${idx}`] !== undefined;
+                                inputElem.value = hasMap ? val : 0;
+                                inputElem.dispatchEvent(new Event('input'));
+                            }
+                        });
+                    });
+                });
+                
+                alert("CSV Processed! Data mapped according to your Mapping Rules.");
+                input.value = ""; 
+                if (isReportActive) generateReport();
+            };
+            reader.readAsText(file);
+        }
+
+        // --- SAVE/LOAD INCLUDING MAPPING ---
+        function saveAdminData() {
+            let adminData = { map: {}, sla: {}, prod: {}, hrs: {} };
+
+            marketplaces.forEach(mp => {
+                let key = mp.replace(/\s/g, '').toLowerCase();
+                slas.forEach(idx => {
+                    adminData.map[`map_${key}_${idx}`] = document.getElementById(`map_${key}_${idx}`).value;
+                });
+                bldgs.forEach(b => {
+                    slas.forEach(idx => {
+                        let id = `adm_${b}_${key}_${idx}`;
+                        adminData.sla[id] = document.getElementById(id).value;
+                    });
+                });
+            });
+
+            bldgs.forEach(b => {
+                adminData.prod[`prod_${b}`] = document.getElementById(`prod_${b}`).value;
+                adminData.hrs[`hrs_${b}`] = document.getElementById(`hrs_${b}`).value;
+            });
+
+            localStorage.setItem('slaDashboardSettings2', JSON.stringify(adminData));
+            document.getElementById('adminModal').style.display = 'none';
+            alert('Settings Saved! Your Mappings & Data will persist across reloads.');
+            if (isReportActive) generateReport();
+        }
+
+        function loadAdminData() {
+            let saved = localStorage.getItem('slaDashboardSettings2'); // New key for new structure
+            if(saved) {
+                let adminData = JSON.parse(saved);
+                for(let id in adminData.map) { if(document.getElementById(id)) document.getElementById(id).value = adminData.map[id]; }
+                for(let id in adminData.sla) { if(document.getElementById(id)) document.getElementById(id).value = adminData.sla[id]; }
+                for(let id in adminData.prod) { if(document.getElementById(id)) document.getElementById(id).value = adminData.prod[id]; }
+                for(let id in adminData.hrs) { if(document.getElementById(id)) document.getElementById(id).value = adminData.hrs[id]; }
+            }
+        }
+
+        function setupEvents() {
+            document.querySelectorAll('.calc-group').forEach(grp => {
+                let inputs = grp.querySelectorAll('.val-input');
+                let total = grp.querySelector('.total-val');
+                inputs.forEach(inp => {
+                    inp.addEventListener('input', function() {
+                        this.value = this.value.replace(/\D/g, '');
+                        let sum = 0;
+                        inputs.forEach(i => sum += Number(i.value) || 0);
+                        total.value = sum;
+                        if(isReportActive) generateReport();
+                    });
+                });
+            });
+
+            document.querySelectorAll('.time-format').forEach(inp => {
+                inp.addEventListener('input', function() {
+                    let v = this.value.replace(/\D/g, '');
+                    if (v.length > 2) v = v.substring(0,2) + ':' + v.substring(2,4);
+                    this.value = v;
+                    if(isReportActive) generateReport();
+                });
+            });
+        }
+
+        function tick() {
+            let now = new Date();
+            let hr = now.getHours(), min = now.getMinutes(), sec = now.getSeconds();
+            let timeStr = String(hr).padStart(2,'0') + ':' + String(min).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+            
+            document.querySelectorAll('.live-time').forEach(el => el.value = timeStr);
+
+            marketplaces.forEach(mp => {
+                let key = mp.replace(/\s/g, '').toLowerCase();
+                bldgs.forEach(b => {
+                    slas.forEach(idx => {
+                        let admVal = document.getElementById(`adm_${b}_${key}_${idx}`).value;
+                        let tlBox = document.getElementById(`tl_${b}_${key}_${idx}`);
+                        let mapVal = document.getElementById(`map_${key}_${idx}`).value; // Check if SLA is mapped
+
+                        if(!mapVal) {
+                            tlBox.value = "";
+                            tlBox.classList.remove('safe');
+                        } else if(admVal && admVal.length === 5) {
+                            let [aH, aM] = admVal.split(':').map(Number);
+                            let diff = (aH * 60 + aM) - (hr * 60 + min);
+                            
+                            if (diff < 0) {
+                                tlBox.value = "LATE";
+                                tlBox.classList.remove('safe');
+                            } else {
+                                tlBox.value = String(Math.floor(diff/60)).padStart(2,'0') + ':' + String(diff%60).padStart(2,'0');
+                                tlBox.classList.add('safe');
+                            }
+                        } else {
+                            tlBox.value = "--:--";
+                            tlBox.classList.remove('safe');
+                        }
+                    });
+                });
+            });
+
+            if (isReportActive) generateReport();
+        }
+
+        function applyFilter() {
+            let f = document.getElementById('bldgFilter').value;
+            let show3 = (f === 'all' || f === 'bldg3');
+            let show5 = (f === 'all' || f === 'bldg5');
+
+            let h3 = document.getElementById('hdr-bldg3');
+            let h5 = document.getElementById('hdr-bldg5');
+            h3.style.display = show3 ? 'block' : 'none';
+            h5.style.display = show5 ? 'block' : 'none';
+            h3.style.borderRight = (f === 'all') ? '3px solid var(--border-light)' : 'none';
+
+            document.querySelectorAll('.bldg3').forEach(el => {
+                el.style.display = show3 ? 'flex' : 'none';
+                el.style.borderRight = (f === 'all') ? '3px solid var(--border-light)' : 'none';
+            });
+            document.querySelectorAll('.bldg5').forEach(el => {
+                el.style.display = show5 ? 'flex' : 'none';
+            });
+
+            if (isReportActive) generateReport();
+        }
+        
+        function toggleSort(col) {
+            if (window.sortCol === col) window.sortDir = window.sortDir === 'asc' ? 'desc' : 'asc';
+            else { window.sortCol = col; window.sortDir = 'asc'; }
+            if (isReportActive) generateReport();
+        }
+        
+        function changeMpFilter(val) {
+            window.filterMp = val;
+            document.querySelectorAll('.mp-filter-select').forEach(sel => sel.value = val);
+            if (isReportActive) generateReport();
+        }
+
+        function activateReport() {
+            isReportActive = true;
+            generateReport();
+            document.getElementById('finalReportView').style.display = 'block';
+            document.getElementById('handoverReportView').style.display = 'block';
+            document.getElementById('finalReportView').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function generateReport() {
+            if (!isReportActive) return;
+
+            let tbodyPacking = document.getElementById('reportTbody');
+            let tbodyHandover = document.getElementById('handoverTbody');
+            
+            let f = document.getElementById('bldgFilter').value;
+            let targetBldgs = f === 'all' ? bldgs : [f];
+
+            let pph = {};
+            bldgs.forEach(b => {
+                let prod = Number(document.getElementById(`prod_${b}`).value) || 0;
+                let hrStr = document.getElementById(`hrs_${b}`).value || "00:00";
+                let hDec = Number(hrStr.split(':')[0]) + (Number(hrStr.split(':')[1]||0)/60);
+                pph[b] = hDec > 0 ? (prod / hDec) : 0; 
+            });
+
+            let reportRows = [];
+
+            marketplaces.forEach(mp => {
+                let key = mp.replace(/\s/g, '').toLowerCase();
+                
+                targetBldgs.forEach(b => {
+                    let bClass = b === 'bldg3' ? 'rep-bldg3' : 'rep-bldg5';
+                    
+                    let trPackingHTML = `<td class="${bClass}">${b.toUpperCase()}</td><td class="rep-mp">${mp}</td>`;
+                    let trHandoverHTML = `<td class="${bClass}">${b.toUpperCase()}</td><td class="rep-mp">${mp}</td>`;
+                    
+                    slas.forEach(idx => {
+                        let mapVal = document.getElementById(`map_${key}_${idx}`).value;
+                        
+                        // Packing logic
+                        let bal = Number(document.getElementById(`bal_${b}_${key}_${idx}`).value) || 0;
+                        let tlStr = document.getElementById(`tl_${b}_${key}_${idx}`).value;
+                        
+                        let timeReqHrs = pph[b] > 0 ? (bal / pph[b]) : 0;
+                        let timeReqMins = timeReqHrs * 60;
+                        let manpower = 0;
+
+                        if(!mapVal) {
+                            timeReqMins = 0;
+                            manpower = 0;
+                        } else if (tlStr === "LATE" && bal > 0) {
+                            manpower = `<span class="badge-breach">Breach</span>`;
+                        } else if (tlStr !== "--:--" && tlStr !== "LATE") {
+                            let tLeftHrs = Number(tlStr.split(':')[0]) + (Number(tlStr.split(':')[1])/60);
+                            if (tLeftHrs > 0) manpower = Math.ceil(timeReqHrs / tLeftHrs); 
+                            else if (tLeftHrs === 0 && bal > 0) manpower = `<span class="badge-breach">Breach</span>`;
+                        }
+                        trPackingHTML += `<td>${timeReqMins.toFixed(0)}</td><td>${bal === 0 ? 0 : manpower}</td>`;
+                        
+                        // Handover Logic
+                        let hQty = window.handoverData[b][key][`sla${idx}`];
+                        trHandoverHTML += `<td>${mapVal ? hQty : 0}</td>`;
+                    });
+
+                    reportRows.push({ bldg: b, mp: mp, packingHTML: trPackingHTML, handoverHTML: trHandoverHTML });
+                });
+            });
+
+            if (window.filterMp !== 'all') reportRows = reportRows.filter(r => r.mp === window.filterMp);
+            if (window.sortCol) {
+                reportRows.sort((a, b) => {
+                    let valA = a[window.sortCol];
+                    let valB = b[window.sortCol];
+                    if (valA < valB) return window.sortDir === 'asc' ? -1 : 1;
+                    if (valA > valB) return window.sortDir === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            tbodyPacking.innerHTML = '';
+            tbodyHandover.innerHTML = '';
+            
+            reportRows.forEach(row => {
+                let trP = document.createElement('tr'); trP.innerHTML = row.packingHTML; tbodyPacking.appendChild(trP);
+                let trH = document.createElement('tr'); trH.innerHTML = row.handoverHTML; tbodyHandover.appendChild(trH);
+            });
+        }
+
+        initApp();
+        setInterval(tick, 1000);
+    </script>
+</body>
+</html>
